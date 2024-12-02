@@ -514,7 +514,7 @@ else:
                     st.error(f"Duplicate ID found at row {original_index+1}. Please modify in google sheets.")
 
         elif st.session_state.selected: #select the choice
-            st.subheader(f"Selected Item: {st.session_state.data.iloc[st.session_state.selected_index]["name"]}")
+            st.subheader(f"Selected Item: {st.session_state.data.iloc[st.session_state.selected_index]['name']}")
             handle_row_selection(st.session_state.selected_index)
     else:
         st.subheader("Inputting New Item:")
