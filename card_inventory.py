@@ -359,7 +359,7 @@ def run_top_to_bottom():
             this_type = st.session_state.current_copy.loc["type"].lower()
             ids_string = ""
             for ind in st.session_state.click_history:
-                ids_string+=f"{st.session_state.data.iloc[ind]["id"]}, "
+                ids_string+=f"{st.session_state.data.iloc[ind]['id']}, "
             #check if we are starting a batch. Don't do any commands if so
             if st.session_state.first_item_using:
                 #make sure its not a toplevel
@@ -370,7 +370,7 @@ def run_top_to_bottom():
                 else:
                     st.session_state.click_history.append(index)
                     st.session_state.first_item_using = False
-                    st.info(f"Remembering history for batch movement. So far: {st.session_state.data.iloc[index]["id"]}. Scan a larger unit to place all these items in it. Will index location starting at 1 if larger item scanned, or scan its location to start there.")
+                    st.info(f"Remembering history for batch movement. So far: {st.session_state.data.iloc[index]['id']}. Scan a larger unit to place all these items in it. Will index location starting at 1 if larger item scanned, or scan its location to start there.")
 
             #if we aren't, look for command execution signs
             else:
@@ -382,7 +382,7 @@ def run_top_to_bottom():
                     elif st.session_state.previous_type.lower() == this_type:
                         if index not in st.session_state.click_history:
                             st.session_state.click_history.append(index)
-                            ids_string+=f"{st.session_state.data.iloc[index]["id"]}, "
+                            ids_string+=f"{st.session_state.data.iloc[index]['id']}, "
                         st.info(f"Remembering history. So far: {ids_string}. Scan a larger unit to place all these items in it.")
                     
                     #we can now execute a command
