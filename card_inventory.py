@@ -464,7 +464,7 @@ def run_top_to_bottom():
 
                         st.session_state.click_history = []
                         st.session_state.first_item_using = True
-                        st.success(f"Assigned {st.session_state.current_copy.loc["id"]} to {associate_id}")
+                        st.success(f"Assigned {st.session_state.current_copy.loc['id']} to {associate_id}")
                         update_rows(service, SPREADSHEET_ID, SHEET_NAME, st.session_state.changes)
                         
                 elif not st.session_state.previous_type == "location" and this_type == "location":
