@@ -280,7 +280,7 @@ def run_top_to_bottom():
             if st.session_state.print_barcodes_in_viewing:
                 def save_to_print_queue():
                     st.session_state.print_barcodes_in_viewing = False
-                    st.session_state.barcode_print_list.append([quantity_to_print, f"{st.session_state.current_copy.loc["id"]}"])
+                    st.session_state.barcode_print_list.append([quantity_to_print, f"{st.session_state.current_copy.loc['id']}"])
                 def cancel_print():
                     st.session_state.print_barcodes_in_viewing = False
 
