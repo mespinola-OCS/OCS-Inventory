@@ -628,7 +628,7 @@ elif inventory_type == "**Machine Parts Database**":
                 template_row = pd.DataFrame([st.session_state.data.loc[st.session_state.new_item_like].copy()])
                 key = template_row.iloc[0]["id"]
                 template_row.iloc[0]["id"] = get_new_id(key=key)
-                template_row.iloc[0]["barcode"] = f"*{template_row.iloc[0]["id"]}*"
+                template_row.iloc[0]["barcode"] = f"*{template_row.iloc[0]['id']}*"
                 edited_df = st.data_editor(
                     template_row,  # Wrap the row in a DataFrame
                     use_container_width=True,
