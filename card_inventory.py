@@ -203,14 +203,14 @@ def run_top_to_bottom():
 
             if location == "" or location is None:          
                 if item_name == "" or item_name is None:  
-                    path_details.append(f"{item_type}: {item_id} with no specified location")
+                    path_details.append(f"{item_type}: {item_id} in slot: None \n")
                 else:
-                    path_details.append(f"{item_type}, {item_name}: {item_id} with no specified location")
+                    path_details.append(f"{item_type}, {item_name}: {item_id} in slot: None. \n")
             else:          
                 if item_name == "" or item_name is None:  
-                    path_details.append(f"{item_type}: {item_id} in slot {location}")
+                    path_details.append(f"{item_type}: {item_id} in slot {location} \n")
                 else:
-                    path_details.append(f"{item_type}, {item_name}: {item_id} in slot {location}")
+                    path_details.append(f"{item_type}, {item_name}: {item_id} in slot {location} \n")
             
             # Find the parent ID and locate the parent index
             parent_id = row["parent"]
@@ -261,11 +261,15 @@ def run_top_to_bottom():
 
         if mode == "Viewing":
             # Show the dataframe for editing using st.data_editor
+            '''
             edited_df = st.dataframe(
                 pd.DataFrame([st.session_state.current_copy]),  # Wrap the row in a DataFrame for data_editor
                 use_container_width=True
             )
-            st.caption(f"**Located at: {locate(index)}**")                            
+            '''
+            st.caption(f"**Location**")  
+            st.caption(locate(index))      
+
             
             def viewing_pills_submit():
                 st.session_state.viewing_pills_query = st.session_state.viewing_pills_widget
