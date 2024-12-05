@@ -639,7 +639,7 @@ elif inventory_type == "**Machine Parts Database**":
                 # Create an empty row with the same columns for new input
                 empty_row = pd.DataFrame([{col: "" for col in st.session_state.data.columns}])
                 empty_row.iloc[0]["id"] = get_new_id()
-                empty_row.iloc[0]["barcode"] = f"*{empty_row.iloc[0]["id"]}*"
+                empty_row.iloc[0]["barcode"] = f"*{empty_row.iloc[0]['id']}*"
                 edited_df = st.data_editor(
                     empty_row,  # Use the empty row as the base
                     use_container_width=True,
