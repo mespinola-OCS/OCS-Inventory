@@ -222,8 +222,8 @@ def run_top_to_bottom():
                 current_index = None
         
         # Construct the final string by joining path details in reverse order
-        path_string = ", ".join(reversed(path_details))
-        return path_string
+        path_list = reversed(path_details)
+        return path_list
 
 
     # Function to handle row selection
@@ -268,7 +268,8 @@ def run_top_to_bottom():
             )
             '''
             st.caption(f"**Location**")  
-            st.caption(locate(index))      
+            for loc in locate(index):
+                st.caption(loc)
 
             
             def viewing_pills_submit():
