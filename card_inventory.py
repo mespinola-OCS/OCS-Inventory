@@ -493,7 +493,7 @@ def run_top_to_bottom():
 
                         st.session_state.click_history = []
                         st.session_state.first_item_using = True
-                        st.success(f"Assigned {st.session_state.data.loc[prev_idx, "id"]} to {associate_id}")
+                        st.success(f"Assigned {st.session_state.data.loc[prev_idx, 'id']} to {associate_id}")
                         update_rows(service, SPREADSHEET_ID, SHEET_NAME, st.session_state.changes)
 
                 else:
