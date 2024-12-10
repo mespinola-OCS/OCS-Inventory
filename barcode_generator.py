@@ -24,11 +24,11 @@ def generate_qr_code(data):
     img = qr.make_image(fill='black', back_color='white').convert('RGB')
 
     # Resize QR code to 0.7" x 0.7" at high DPI (e.g., 300 DPI)
-    img = img.resize((int(0.7 * dpi), int(0.7 * dpi)), Image.LANCZOS)
+    img = img.resize((int(1.6 * dpi), int(1.6 * dpi)), Image.LANCZOS)
 
     # Create a new image with white background to accommodate the QR code and text
-    img_with_number = Image.new('RGB', (int(2.625 * dpi), int(1 * dpi)), 'white')
-    img_with_number.paste(img, (int((2.625 * dpi - img.width) / 2), 0))
+    img_with_number = Image.new('RGB', (int(2 * dpi), int(2 * dpi)), 'white')
+    img_with_number.paste(img, (int((2 * dpi - img.width) / 2), 0))
 
     # Draw text below the QR code
     draw = ImageDraw.Draw(img_with_number)
@@ -89,6 +89,53 @@ def create_pdf(items):
     return pdf
 
 
+def create_pdf_new(items):
+    # Constants for layout
+    dpi = 300  # Higher DPI for better quality
+    inch_to_points = 72  # Conversion factor from inches to points
+    page_width = 8.5 * inch_to_points  # Letter-size width in points
+    page_height = 11 * inch_to_points  # Letter-size height in points
+    label_width = 2 * inch_to_points  # Sticker width in points (2 inches)
+    label_height = 2 * inch_to_points  # Sticker height in points (2 inches)
+    horizontal_margin = 0.25 * inch_to_points  # Left/right margins (0.25 inches)
+    vertical_margin = 0.4 * inch_to_points  # Top/bottom margins (0.5 inches)
+    horizontal_spacing = (page_width - (4 * label_width) - (2 * horizontal_margin)) / 3  # Space between stickers horizontally
+    vertical_spacing = (page_height - (5 * label_height) - (2 * vertical_margin)) / 4  # Space between stickers vertically
+
+    # Create the PDF
+    pdf = FPDF('P', 'pt', (page_width, page_height))
+    pdf.add_page()
+    
+    current_x = horizontal_margin
+    current_y = vertical_margin
+
+    for quantity, qr_string in items:
+        for _ in range(quantity):
+            # Generate QR code with string
+            img = generate_qr_code(qr_string)
+
+            # Save the QR code image temporarily
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
+                img.save(tmpfile.name, format="png", dpi=(dpi, dpi))
+
+                # Add QR code image to PDF
+                pdf.image(tmpfile.name, x=current_x, y=current_y, w=label_width, h=label_height)
+
+            os.remove(tmpfile.name)  # Clean up the temporary file
+            
+            # Move to the next label position
+            current_x += label_width + horizontal_spacing
+            if current_x + label_width / 2 > page_width:  # Move to next row
+                current_x = horizontal_margin
+                current_y += label_height + vertical_spacing
+                if current_y + label_height / 2 > page_height:  # Add a new page
+                    pdf.add_page()
+                    current_x = horizontal_margin
+                    current_y = vertical_margin
+
+    return pdf
+
+
 # Main code to generate and download the PDF
 def download_qr_code_pdf(items):
     # Generate the QR code PDF
@@ -98,7 +145,7 @@ def download_qr_code_pdf(items):
     name = datetime.datetime.now()
     name = name.strftime('%Y-%m-%d %H:%M')
     name = f"Exported_Barcodes_{name}.pdf"
-    pdf = create_pdf(items)
+    pdf = create_pdf_new(items)
 
     html = create_download_link(pdf.output(dest="S").encode("latin-1"), name)
     st.markdown(html, unsafe_allow_html=True)
