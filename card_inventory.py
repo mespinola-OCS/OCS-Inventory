@@ -33,6 +33,9 @@ def run_top_to_bottom():
     if "changes" not in st.session_state:
         st.session_state.changes = {} #changes to push when we send batch data
 
+    if "card_changes" not in st.session_state:
+        st.session_state.card_changes = {} #changes to push when we send batch data
+
     if "rerun_action" not in st.session_state:
         st.session_state.rerun_action = True
 
@@ -51,15 +54,17 @@ def run_top_to_bottom():
     if "first_item_using" not in st.session_state:
         st.session_state.first_item_using = True
 
-    if "hierarchy" not in st.session_state:
-        st.session_state.hierarchy = {
-            "machine": 1,
-            "shelf": 1,
-            "cart": 1,
-            "tray": 2,
-            "box": 3,
-            "separator":4,
-            "location": 100
+    if "valid_parents" not in st.session_state:
+        st.session_state.valid_parents = {
+            "machine": [], #1
+            "shelf": [], #1
+            "cart": [], #1
+            "tray": ["cart", "shelf", "machine"], #2
+            "storage box": ["shelf"], #idk
+            "box": ["tray"], #3
+            "separator":["box", "storage box"], #4
+            "location": [],
+            "card": ["box", "separator"]
         }
 
     if "previous_type" not in st.session_state:
@@ -297,8 +302,6 @@ def run_top_to_bottom():
             display_parent()
             display_children()
 
-                    
-
         elif mode == "Deleting":
             # col1, col2 = st.columns([1,13])
             # with col1:
@@ -321,8 +324,8 @@ def run_top_to_bottom():
 
         elif mode == "Using":
             def verify_proper_action(batch_type, end_type):
-                hierarchy = st.session_state.hierarchy
-                if hierarchy[batch_type] - hierarchy[end_type] == 1: #check if we are placing an item of status exactly 1 less into parent. Otherwise fail.
+                valid_parents = st.session_state.valid_parents
+                if end_type in valid_parents[batch_type]: #check if we are placing an item of status exactly 1 less into parent. Otherwise fail.
                     return True                            
                 else:
                     st.error(f"Did not complete action. Cannot place type {batch_type} in {end_type}.") 
@@ -351,6 +354,15 @@ def run_top_to_bottom():
                 associate_type = st.session_state.data.loc[associate_idx, "type"]
                 return associate_idx, associate_id, associate_type
             
+            def get_location_from_object(idx, slot=0):
+                df = st.session_state.data
+                parent_id = st.session_state.data.loc[idx, "id"]
+                associate_id = f"{parent_id}-{slot}"
+                associate_idx = df.index[df['id'] == associate_id][0] #get index of location
+                associate_type = df.loc[associate_idx, "type"]
+                return associate_idx, associate_id, associate_type
+
+            
             def remove_existing_relationship_at(idx):
                 df = st.session_state.data
                 existing_child_id = df.loc[idx, "child"].strip()
@@ -360,6 +372,109 @@ def run_top_to_bottom():
                     df.loc[existing_child_idx, "location"] = "" #remove the existing child's location in column
                     st.session_state.changes[existing_child_idx] = st.session_state.data.iloc[existing_child_idx].copy()
                     remove_children_from_other_parents([existing_child_id]) #remove the child from all parents
+
+            def handle_separator_to_box(sep_idx: list, box_idx: int, location_idx=None):
+                df = st.session_state.data
+
+                if location_idx is None:
+                    location_idx, location_id, location_type = get_location_from_object(box_idx)
+
+                if df.loc[box_idx, "type"] == "storage box":
+                    if location_idx is None:
+                        st.error(f"Did not complete action. No locations associated with {df.loc[box_idx, 'id']}")
+                        return
+                    sep_ids = [] #list of separator batch IDS to assign to location
+                    for idx in sep_idx:
+                        sep_ids.append(df.loc[idx, "id"])
+                        df.loc[idx, "parent"] = df.loc[box_idx, "id"]
+                        df.loc[idx, "location"] = df.loc[location_idx, "location"]
+                        st.session_state.changes[idx] = df.iloc[idx].copy()
+
+                    remove_children_from_other_parents(sep_ids)
+
+                    existing_sep_ids = df.loc[location_idx, "child"]
+                    if pd.notna(existing_sep_ids) and existing_sep_ids.strip():
+                        current_sep_ids = existing_sep_ids.split(",")
+                    else:
+                        current_sep_ids = []
+
+                    updated_sep_ids = list(set(current_sep_ids + list(map(str, sep_ids))))
+
+                    df.loc[location_idx, "child"] = ",".join(updated_sep_ids)
+                    st.session_state.changes[location_idx] = df.iloc[location_idx].copy()
+
+
+
+                    # Get the list of child IDs based on click_history
+                    existing_child_ids = df.loc[box_idx, "child"]
+                    if pd.notna(existing_child_ids) and existing_child_ids.strip():
+                        current_child_ids = existing_child_ids.split(",")
+                    else:
+                        current_child_ids = []
+
+                    updated_child_ids = list(set(current_child_ids + list(map(str, sep_ids))))
+                    df.loc[box_idx, "child"] = ",".join(updated_child_ids) #add the set of separators to children
+                    st.session_state.changes[box_idx] = df.iloc[box_idx].copy()
+                    st.success(f"Placed {df.loc[sep_idx, 'id']} in {df.loc[box_idx, 'id']}.") 
+
+                elif df.loc[box_idx, "type"] == "box":
+                    if len(sep_idx) > 1:
+                        st.warning(f"Completed action but only with the last scanned item.") 
+                    sep_idx = sep_idx[-1]
+
+                    sep_ids = [] #list of separator batch IDS to assign to location
+                    sep_ids.append(df.loc[sep_idx, "id"])
+                    df.loc[sep_idx, "parent"] = df.loc[box_idx, "id"]
+
+                    remove_children_from_other_parents(sep_idx)
+                    
+
+                    # Get the list of child IDs based on click_history
+                    existing_child_ids = df.loc[box_idx, "child"]
+                    passed_child_ids = []
+
+                    if pd.notna(existing_child_ids) and existing_child_ids.strip():
+                        current_child_ids = existing_child_ids.split(",")
+                        for child_id in current_child_ids:
+                            child_idx = df.index[df['id'] == child_id][0] if any(df['id'] == child_id) else None
+                            if child_idx is not None:
+                                df.loc[child_idx, "parent"] = "" #remove the existing child's parent in column
+                                df.loc[child_idx, "location"] = "" #remove the existing child's location in column
+                                st.session_state.changes[child_idx] = st.session_state.data.iloc[child_idx].copy()
+                            else:
+                                #leave alone since it is a card
+                                passed_child_ids.append(child_id)
+                    else:
+                        current_child_ids = []
+
+                    if len(passed_child_ids) > 0:
+                        cdf = st.session_state.card_data
+                        for card_id in passed_child_ids:
+                            card_idx = cdf.index[cdf['id'] == card_id][0] if any(cdf['id'] == card_id) else None
+                            if card_idx is not None:
+                                cdf.loc[card_idx, "parent"] = df.loc[sep_idx, "id"]
+                                st.session_state.card_changes[card_idx] = cdf.iloc[card_idx].copy()
+
+                    df.loc[sep_idx, "location"] = len(passed_child_ids)
+                    st.session_state.changes[sep_idx] = df.iloc[sep_idx].copy()
+
+                    str_passed = ",".join(passed_child_ids)
+                    df.loc[sep_idx, "child"] = str_passed #add cards to separator
+                    df.loc[box_idx, "child"] = df.loc[sep_idx, "id"] #add the set of separators to children
+                    st.session_state.changes[box_idx] = df.iloc[box_idx].copy()
+                    st.session_state.changes[sep_idx] = df.iloc[sep_idx].copy()
+
+                    st.success(f"Placed {df.loc[sep_idx, 'id']} in {df.loc[box_idx, 'id']}.") 
+                    if len(passed_child_ids) > 0:
+                        st.success(f"{df.loc[sep_idx, 'id']} assumed all of {df.loc[box_idx, 'id']} cards.") 
+
+                st.session_state.click_history = []
+                st.session_state.first_item_using = True
+                update_rows(service, SPREADSHEET_ID, SHEET_NAME, st.session_state.changes)
+                update_rows(service, SPREADSHEET_ID, CARD_SHEET_NAME, st.session_state.card_changes)
+
+                        
+
             
             this_type = st.session_state.current_copy.loc["type"].lower()
             ids_string = ""
@@ -389,8 +504,12 @@ def run_top_to_bottom():
                             st.session_state.click_history.append(index)
                             ids_string+=f"{st.session_state.data.iloc[index]['id']}, "
                         st.info(f"Remembering history. So far: {ids_string}. Scan a larger unit to place all these items in it.")
-                    
-                    #we can now execute a command
+                    #check if separators are being assigned to boxes...
+                    elif st.session_state.previous_type.lower() == "separator":
+                        if verify_proper_action(st.session_state.previous_type.lower(), this_type):
+                            handle_separator_to_box(st.session_state.click_history, index)
+                            
+                    #we can now execute a more genearl command
                     else:
                         if verify_proper_action(st.session_state.previous_type.lower(), this_type):
                             # Get the parent ID from the "id" column at the parent_index
@@ -400,7 +519,6 @@ def run_top_to_bottom():
                             df = st.session_state.data
 
                             # Update the "parent" column for each index in click_history
-                            additional_increment = 0
                             for i, child_index in enumerate(st.session_state.click_history):
                                 associate_id = f"{parent_id}-{i}"
                                 associate_idx = df.index[df['id'] == associate_id][0] if any(df['id'] == associate_id) else None #get index of location
@@ -445,61 +563,67 @@ def run_top_to_bottom():
 
                 elif st.session_state.previous_type == "location" and not this_type == "location":
                     associate_idx, associate_id, associate_type = get_location_associate(st.session_state.previous_index)
-                    if verify_proper_action(this_type, associate_type):
-                        remove_existing_relationship_at(st.session_state.previous_index)
-                        #assign the current scan to the location and reset (add this_type's ID to location's child and the location's associated item's Child)
-                        remove_children_from_other_parents([st.session_state.current_copy.loc["id"]])
-                        st.session_state.data.loc[st.session_state.previous_index, "child"] = st.session_state.current_copy.loc["id"] #set location's child
-                        st.session_state.changes[st.session_state.previous_index] = st.session_state.data.iloc[st.session_state.previous_index].copy()
-                        existing_child_ids = st.session_state.data.loc[associate_idx, "child"]
-                        if pd.notna(existing_child_ids) and existing_child_ids.strip():
-                            current_child_ids = existing_child_ids.split(",")
-                        else:
-                            current_child_ids = []
+                    if this_type == "separator":
+                        handle_separator_to_box([index], associate_idx, location_idx=st.session_state.previous_index)
+                    else:
+                        if verify_proper_action(this_type, associate_type):
+                            remove_existing_relationship_at(st.session_state.previous_index)
+                            #assign the current scan to the location and reset (add this_type's ID to location's child and the location's associated item's Child)
+                            remove_children_from_other_parents([st.session_state.current_copy.loc["id"]])
+                            st.session_state.data.loc[st.session_state.previous_index, "child"] = st.session_state.current_copy.loc["id"] #set location's child
+                            st.session_state.changes[st.session_state.previous_index] = st.session_state.data.iloc[st.session_state.previous_index].copy()
+                            existing_child_ids = st.session_state.data.loc[associate_idx, "child"]
+                            if pd.notna(existing_child_ids) and existing_child_ids.strip():
+                                current_child_ids = existing_child_ids.split(",")
+                            else:
+                                current_child_ids = []
 
-                        new_child_id = str(st.session_state.current_copy.loc["id"])
-                        updated_child_ids = list(set(current_child_ids + [new_child_id]))
+                            new_child_id = str(st.session_state.current_copy.loc["id"])
+                            updated_child_ids = list(set(current_child_ids + [new_child_id]))
 
-                        st.session_state.data.loc[associate_idx, "child"] = ",".join(updated_child_ids)
-                        st.session_state.data.loc[index, "parent"] = associate_id   #set scanned
-                        st.session_state.data.loc[index, "location"] = st.session_state.data.loc[st.session_state.previous_index, "location"] #set child location column
-                        st.session_state.changes[index] = st.session_state.data.iloc[index].copy()
-                        st.session_state.changes[associate_idx] = st.session_state.data.iloc[associate_idx].copy()
+                            st.session_state.data.loc[associate_idx, "child"] = ",".join(updated_child_ids)
+                            st.session_state.data.loc[index, "parent"] = associate_id   #set scanned
+                            st.session_state.data.loc[index, "location"] = st.session_state.data.loc[st.session_state.previous_index, "location"] #set child location column
+                            st.session_state.changes[index] = st.session_state.data.iloc[index].copy()
+                            st.session_state.changes[associate_idx] = st.session_state.data.iloc[associate_idx].copy()
 
 
-                        st.session_state.click_history = []
-                        st.session_state.first_item_using = True
-                        st.success(f"Assigned {st.session_state.current_copy.loc['id']} to {associate_id}")
-                        update_rows(service, SPREADSHEET_ID, SHEET_NAME, st.session_state.changes)
+                            st.session_state.click_history = []
+                            st.session_state.first_item_using = True
+                            st.success(f"Assigned {st.session_state.current_copy.loc['id']} to {associate_id}")
+                            update_rows(service, SPREADSHEET_ID, SHEET_NAME, st.session_state.changes)
                         
                 elif not st.session_state.previous_type == "location" and this_type == "location":
                     associate_idx, associate_id, associate_type = get_location_associate(index)
-                    prev_idx = st.session_state.previous_index
-                    if verify_proper_action(st.session_state.previous_type, associate_type):
-                        remove_existing_relationship_at(index)
-                        remove_children_from_other_parents([st.session_state.data.loc[prev_idx, "id"]])
-                        #assign the current scan to the location and reset (add this_type's ID to location's child and the location's associated item's Child)
-                        st.session_state.data.loc[index, "child"] = st.session_state.data.loc[prev_idx, "id"] #set location's child
-                        st.session_state.changes[index] = st.session_state.data.iloc[index].copy()
+                    if st.session_state.previous_type == "separator":
+                        handle_separator_to_box(st.session_state.click_history, associate_idx, location_idx=index)
+                    else:
+                        prev_idx = st.session_state.previous_index
+                        if verify_proper_action(st.session_state.previous_type, associate_type):
+                            remove_existing_relationship_at(index)
+                            remove_children_from_other_parents([st.session_state.data.loc[prev_idx, "id"]])
+                            #assign the current scan to the location and reset (add this_type's ID to location's child and the location's associated item's Child)
+                            st.session_state.data.loc[index, "child"] = st.session_state.data.loc[prev_idx, "id"] #set location's child
+                            st.session_state.changes[index] = st.session_state.data.iloc[index].copy()
 
-                        existing_child_ids = st.session_state.data.loc[associate_idx, "child"]
-                        if pd.notna(existing_child_ids) and existing_child_ids.strip():
-                            current_child_ids = existing_child_ids.split(",")
-                        else:
-                            current_child_ids = []
-                        new_child_id = str(st.session_state.data.loc[prev_idx, "id"])
-                        updated_child_ids = list(set(current_child_ids + [new_child_id]))
+                            existing_child_ids = st.session_state.data.loc[associate_idx, "child"]
+                            if pd.notna(existing_child_ids) and existing_child_ids.strip():
+                                current_child_ids = existing_child_ids.split(",")
+                            else:
+                                current_child_ids = []
+                            new_child_id = str(st.session_state.data.loc[prev_idx, "id"])
+                            updated_child_ids = list(set(current_child_ids + [new_child_id]))
 
-                        st.session_state.data.loc[associate_idx, "child"] = ",".join(updated_child_ids)
-                        st.session_state.data.loc[prev_idx, "parent"] = associate_id   #set scanned
-                        st.session_state.data.loc[prev_idx, "location"] = st.session_state.data.loc[index, "location"] #set child location column
-                        st.session_state.changes[prev_idx] = st.session_state.data.iloc[prev_idx].copy()
-                        st.session_state.changes[associate_idx] = st.session_state.data.iloc[associate_idx].copy()
+                            st.session_state.data.loc[associate_idx, "child"] = ",".join(updated_child_ids)
+                            st.session_state.data.loc[prev_idx, "parent"] = associate_id   #set scanned
+                            st.session_state.data.loc[prev_idx, "location"] = st.session_state.data.loc[index, "location"] #set child location column
+                            st.session_state.changes[prev_idx] = st.session_state.data.iloc[prev_idx].copy()
+                            st.session_state.changes[associate_idx] = st.session_state.data.iloc[associate_idx].copy()
 
-                        st.session_state.click_history = []
-                        st.session_state.first_item_using = True
-                        st.success(f"Assigned {st.session_state.data.loc[prev_idx, 'id']} to {associate_id}")
-                        update_rows(service, SPREADSHEET_ID, SHEET_NAME, st.session_state.changes)
+                            st.session_state.click_history = []
+                            st.session_state.first_item_using = True
+                            st.success(f"Assigned {st.session_state.data.loc[prev_idx, 'id']} to {associate_id}")
+                            update_rows(service, SPREADSHEET_ID, SHEET_NAME, st.session_state.changes)
 
                 else:
                     st.warning("Did not complete action. Cannot assign location to location.")
@@ -522,7 +646,8 @@ def run_top_to_bottom():
 
     # Proceed to the rest of the app
     SPREADSHEET_ID = "1x5QrksNozxbZhf9GlJkWY2FtLG6-H0x7Lr6wKvGODSk"
-    SHEET_NAME = "Cards"
+    SHEET_NAME = "Containers"
+    CARD_SHEET_NAME = "Cards"
 
     # Load data from Google Sheets
     #try:
@@ -531,10 +656,18 @@ def run_top_to_bottom():
     elif st.session_state.data is None:
         st.session_state.data = fetch_sheet_data(service, SPREADSHEET_ID, SHEET_NAME)
 
+    if "card_data" not in st.session_state:
+        st.session_state.card_data = fetch_sheet_data(service, SPREADSHEET_ID, CARD_SHEET_NAME)
+    elif st.session_state.card_data is None:
+        st.session_state.card_data = fetch_sheet_data(service, SPREADSHEET_ID, CARD_SHEET_NAME)
+
     # Ensure required columns exist
-    if not {"id", "name", "type", "parent", "child", "barcode", "location"}.issubset(st.session_state.data.columns):
+    if not {"id", "name", "type", "parent", "child", "barcode", "location"}.issubset(st.session_state.data.columns) or not {"id", "parent", "index","year", "series", "sport", "text", "hyperlink", "grade", "price"}.issubset(st.session_state.card_data.columns):
         st.error(
-            "The sheet must have the required columns: 'id', 'name', 'type', 'parent', 'child', 'barcode', 'location'"
+            "The containers sheet must have the required columns: 'id', 'name', 'type', 'parent', 'child', 'barcode', 'location'"
+        )
+        st.error(
+            "The cards sheet must have the required columns: 'id', 'parent', 'index', 'year', 'series', 'sport', 'text', 'hyperlink', 'grade', 'price'"
         )
         st.stop()
     else:
@@ -556,7 +689,7 @@ def run_top_to_bottom():
         st.subheader("Filter and Search")
 
         # Category filter
-        categories_list = ("shelf", "machine", "cart", "tray", "box", "separator", "location")
+        categories_list = ("shelf", "machine", "cart", "tray", "box", "storage box", "separator", "location")
 
         c1, c2, c3, c4 = st.columns([5, 5, 1.5, 1.5])
         with c1:
@@ -709,6 +842,15 @@ def run_top_to_bottom():
                     if not any(st.session_state.data['id'] == node_id):
                         return node_id
                     
+            def get_new_card_id():
+                """Generate a unique ID based on the type."""
+                while True:
+                    random_id = ''.join(random.choices(string.ascii_uppercase, k=10))
+                    node_id = f"CAR-{random_id}"
+                    # Ensure ID is unique by checking against existing DataFrame
+                    if not any(st.session_state.card_data['id'] == node_id):
+                        return node_id
+                    
             def get_location_ids(node_id, quantity):
                 outputs = []
                 for i in range(quantity):
@@ -760,13 +902,40 @@ def run_top_to_bottom():
                 update_rows(service, SPREADSHEET_ID, SHEET_NAME, st.session_state.changes)
                 st.rerun()
 
+
+            def save_new_card(quantity, index, year, series, sport, text, hyperlink, grade, price):
+                """Save new items to the session DataFrame and update the barcode list."""
+                for _ in range(quantity):
+                    node_id = get_new_card_id()
+
+                    # Generate a new row for the DataFrame
+                    new_row = pd.DataFrame([{
+                        "id": node_id,
+                        "parent": "",
+                        "index": index,
+                        "year": year,
+                        "series": series,
+                        "sport": sport,
+                        "text": text,
+                        "hyperlink": hyperlink,
+                        "grade": grade,
+                        "price": price
+                    }])
+                    st.session_state.card_data = pd.concat([st.session_state.card_data, new_row], ignore_index=True)
+                    st.session_state.card_changes[len(st.session_state.card_data) - 1] = new_row.iloc[0].copy()
+
+
+                st.session_state.new_item_entry = False  # Reset the new item session key
+                update_rows(service, SPREADSHEET_ID, CARD_SHEET_NAME, st.session_state.card_changes)
+                st.rerun()
+
             def cancel_new_item():
                 st.session_state.new_item_entry = False  # Reset the new item session key
                 st.rerun()
 
             with st.form("add_items_form"):
-                st.subheader("Add New Items")
-                node_type = st.selectbox("Select Type", ["shelf", "cart", "machine", "tray", "box", "separator"])
+                st.subheader("Add New Containers")
+                node_type = st.selectbox("Select Type", ["shelf", "cart", "machine", "tray", "box", "storage box", "separator"])
                 quantity = st.number_input("Quantity", min_value=1, max_value=500, step=1)
                 name = st.text_input("Name (optional)")
                 location_specific_quantity = st.number_input("How many location-specific tags?", min_value=0, max_value=500, step=1)
@@ -774,6 +943,22 @@ def run_top_to_bottom():
                 if submitted:
                     save_new_items(node_type, quantity, name, location_specific_quantity)  # Save new items to the session state and dataframe
                     st.success(f"{quantity} {node_type}(s) added successfully!")
+
+            with st.form("add_card_form"):
+                st.subheader("Add New Cards")
+                quantity2 = st.number_input("Quantity", min_value=1, max_value=500, step=1)
+                index = st.text_input("Index position in stack")
+                year = st.text_input("Year (optional)")
+                series = st.text_input("Series (optional)")
+                sport = st.text_input("Sport (optional)")
+                text = st.text_input("Text (optional)")
+                hyperlink = st.text_input("Hyperlink (optional)")
+                grade = st.text_input("Grade (optional)")
+                price = st.text_input("Price (optional)")
+                submitted = st.form_submit_button("Submit")
+                if submitted:
+                    save_new_card(quantity2, index, year, series, sport, text, hyperlink, grade, price) # Save new items to the session state and dataframe
+                    st.success(f"{quantity2} cards added successfully!")
                         
             cancel_button = st.button("Cancel")
             if cancel_button:
