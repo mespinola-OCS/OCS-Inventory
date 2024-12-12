@@ -662,12 +662,12 @@ def run_top_to_bottom():
         st.session_state.card_data = fetch_sheet_data(service, SPREADSHEET_ID, CARD_SHEET_NAME)
 
     # Ensure required columns exist
-    if not {"id", "name", "type", "parent", "child", "barcode", "location"}.issubset(st.session_state.data.columns) or not {"id", "parent", "index","year", "series", "sport", "text", "hyperlink", "grade", "price"}.issubset(st.session_state.card_data.columns):
+    if not {"id", "name", "type", "parent", "child", "barcode", "location"}.issubset(st.session_state.data.columns) or not {"id", "parent", "json_front","json_back"}.issubset(st.session_state.card_data.columns):
         st.error(
             "The containers sheet must have the required columns: 'id', 'name', 'type', 'parent', 'child', 'barcode', 'location'"
         )
         st.error(
-            "The cards sheet must have the required columns: 'id', 'parent', 'index', 'year', 'series', 'sport', 'text', 'hyperlink', 'grade', 'price'"
+            "The cards sheet must have the required columns: 'id', 'parent', 'json_front', 'json_back'"
         )
         st.stop()
     else:
@@ -903,7 +903,7 @@ def run_top_to_bottom():
                 st.rerun()
 
 
-            def save_new_card(quantity, index, year, series, sport, text, hyperlink, grade, price):
+            def save_new_card(quantity, json_front, json_back):
                 """Save new items to the session DataFrame and update the barcode list."""
                 for _ in range(quantity):
                     node_id = get_new_card_id()
@@ -912,14 +912,8 @@ def run_top_to_bottom():
                     new_row = pd.DataFrame([{
                         "id": node_id,
                         "parent": "",
-                        "index": index,
-                        "year": year,
-                        "series": series,
-                        "sport": sport,
-                        "text": text,
-                        "hyperlink": hyperlink,
-                        "grade": grade,
-                        "price": price
+                        "json_front": json_front,
+                        "json_back": json_back
                     }])
                     st.session_state.card_data = pd.concat([st.session_state.card_data, new_row], ignore_index=True)
                     st.session_state.card_changes[len(st.session_state.card_data) - 1] = new_row.iloc[0].copy()
@@ -947,17 +941,11 @@ def run_top_to_bottom():
             with st.form("add_card_form"):
                 st.subheader("Add New Cards")
                 quantity2 = st.number_input("Quantity", min_value=1, max_value=500, step=1)
-                index = st.text_input("Index position in stack")
-                year = st.text_input("Year (optional)")
-                series = st.text_input("Series (optional)")
-                sport = st.text_input("Sport (optional)")
-                text = st.text_input("Text (optional)")
-                hyperlink = st.text_input("Hyperlink (optional)")
-                grade = st.text_input("Grade (optional)")
-                price = st.text_input("Price (optional)")
+                json_front = st.text_input("json_front")
+                json_back = st.text_input("json_back")
                 submitted = st.form_submit_button("Submit")
                 if submitted:
-                    save_new_card(quantity2, index, year, series, sport, text, hyperlink, grade, price) # Save new items to the session state and dataframe
+                    save_new_card(quantity2, json_front, json_back) # Save new items to the session state and dataframe
                     st.success(f"{quantity2} cards added successfully!")
                         
             cancel_button = st.button("Cancel")
