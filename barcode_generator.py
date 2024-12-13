@@ -8,7 +8,7 @@ import tempfile
 import os
 
 
-def generate_qr_code(data):
+def generate_qr_code(data, label_w, label_h, format = "square"):
     # High DPI for better quality
     dpi = 300  # Increase the DPI for higher resolution
     
@@ -23,30 +23,61 @@ def generate_qr_code(data):
     qr.make(fit=True)
     img = qr.make_image(fill='black', back_color='white').convert('RGB')
 
-    # Resize QR code to 0.7" x 0.7" at high DPI (e.g., 300 DPI)
-    img = img.resize((int(1.6 * dpi), int(1.6 * dpi)), Image.LANCZOS)
+    
+
 
     # Create a new image with white background to accommodate the QR code and text
-    img_with_number = Image.new('RGB', (int(2 * dpi), int(2 * dpi)), 'white')
-    img_with_number.paste(img, (int((2 * dpi - img.width) / 2), 0))
 
-    # Draw text below the QR code
-    draw = ImageDraw.Draw(img_with_number)
-    font = ImageFont.truetype("DejaVuSans.ttf", int(14 * dpi / 72))  # Scale font size based on DPI
-    text = data
+    if format == "square":
+        # Resize QR code to 0.7" x 0.7" at high DPI (e.g., 300 DPI)
+        qr_w = 0.8*min(label_w, label_h)
+        qr_h = 0.8*min(label_w, label_h)
+        img = img.resize((int(qr_w * dpi), int(qr_h * dpi)), Image.LANCZOS)
 
-    # Use textbbox (new method) instead of textsize (deprecated) to get the bounding box of the text
-    text_bbox = draw.textbbox((0, 0), text, font=font)
-    text_width = text_bbox[2] - text_bbox[0]
-    text_height = text_bbox[3] - text_bbox[1]
+        img_with_number = Image.new('RGB', (int(label_w * dpi), int(label_h * dpi)), 'white')
+        img_with_number.paste(img, (int((label_w * dpi - img.width) / 2), 0))
 
-    # Draw the text in the center below the QR code
-    draw.text(
-        ((img_with_number.width - text_width) / 2, img.height + 2),
-        text,
-        fill='black',
-        font=font
-    )
+        # Draw text below the QR code
+        draw = ImageDraw.Draw(img_with_number)
+        font = ImageFont.truetype("DejaVuSans.ttf", int(14*(label_h/2) * dpi / 72))  # Scale font size based on DPI
+        text = data
+
+        # Use textbbox (new method) instead of textsize (deprecated) to get the bounding box of the text
+        text_bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = text_bbox[2] - text_bbox[0]
+        text_height = text_bbox[3] - text_bbox[1]
+
+        # Draw the text in the center below the QR code
+        draw.text(
+            ((img_with_number.width - text_width) / 2, img.height + 2),
+            text,
+            fill='black',
+            font=font
+        )
+    elif format == "separator top":
+        img = img.resize((int(0.25 * dpi), int(0.25 * dpi)), Image.LANCZOS)
+
+        img_with_number = Image.new('RGB', (int(1 * dpi), int(0.25 * dpi)), 'white')
+        img_with_number.paste(img, (int((1 * dpi - img.width) / 2), 0))
+
+        # Draw text below the QR code
+        draw = ImageDraw.Draw(img_with_number)
+        font = ImageFont.truetype("DejaVuSans.ttf", int(14*(label_h/2) * dpi / 72))  # Scale font size based on DPI
+        text = data
+
+        # Use textbbox (new method) instead of textsize (deprecated) to get the bounding box of the text
+        text_bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = text_bbox[2] - text_bbox[0]
+        text_height = text_bbox[3] - text_bbox[1]
+
+        # Draw the text in the center below the QR code
+        draw.text(
+            ((img_with_number.width - text_width) / 2, img.height + 2),
+            text,
+            fill='black',
+            font=font
+        )
+
 
     return img_with_number
 
@@ -70,7 +101,7 @@ def create_pdf(items):
         
         for _ in range(quantity):
             # Generate QR code with string
-            img = generate_qr_code(qr_string)
+            img = generate_qr_code(qr_string, 2, 2)
 
             with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:
                 img.save(tmpfile.name, format="png", dpi=(300, 300))
@@ -112,7 +143,7 @@ def create_pdf_new(items):
     for quantity, qr_string in items:
         for _ in range(quantity):
             # Generate QR code with string
-            img = generate_qr_code(qr_string)
+            img = generate_qr_code(qr_string, 2, 2)
 
             # Save the QR code image temporarily
             with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmpfile:

@@ -326,6 +326,7 @@ def run_top_to_bottom():
             def verify_proper_action(batch_type, end_type):
                 valid_parents = st.session_state.valid_parents
                 if end_type in valid_parents[batch_type]: #check if we are placing an item of status exactly 1 less into parent. Otherwise fail.
+                    fetch_sheet_data()
                     return True                            
                 else:
                     st.error(f"Did not complete action. Cannot place type {batch_type} in {end_type}.") 
@@ -448,12 +449,13 @@ def run_top_to_bottom():
                         current_child_ids = []
 
                     if len(passed_child_ids) > 0:
-                        cdf = st.session_state.card_data
-                        for card_id in passed_child_ids:
-                            card_idx = cdf.index[cdf['id'] == card_id][0] if any(cdf['id'] == card_id) else None
-                            if card_idx is not None:
-                                cdf.loc[card_idx, "parent"] = df.loc[sep_idx, "id"]
-                                st.session_state.card_changes[card_idx] = cdf.iloc[card_idx].copy()
+                        pass
+                        #cdf = st.session_state.card_data
+                        # for card_id in passed_child_ids:
+                        #     card_idx = cdf.index[cdf['id'] == card_id][0] if any(cdf['id'] == card_id) else None
+                        #     if card_idx is not None:
+                        #         cdf.loc[card_idx, "parent"] = df.loc[sep_idx, "id"]
+                        #         st.session_state.card_changes[card_idx] = cdf.iloc[card_idx].copy()
 
                     df.loc[sep_idx, "location"] = len(passed_child_ids)
                     st.session_state.changes[sep_idx] = df.iloc[sep_idx].copy()
@@ -656,19 +658,20 @@ def run_top_to_bottom():
     elif st.session_state.data is None:
         st.session_state.data = fetch_sheet_data(service, SPREADSHEET_ID, SHEET_NAME)
 
-    if "card_data" not in st.session_state:
-        st.session_state.card_data = fetch_sheet_data(service, SPREADSHEET_ID, CARD_SHEET_NAME)
-    elif st.session_state.card_data is None:
-        st.session_state.card_data = fetch_sheet_data(service, SPREADSHEET_ID, CARD_SHEET_NAME)
+    # if "card_data" not in st.session_state:
+    #     st.session_state.card_data = fetch_sheet_data(service, SPREADSHEET_ID, CARD_SHEET_NAME)
+    # elif st.session_state.card_data is None:
+    #     st.session_state.card_data = fetch_sheet_data(service, SPREADSHEET_ID, CARD_SHEET_NAME)
 
     # Ensure required columns exist
-    if not {"id", "name", "type", "parent", "child", "barcode", "location"}.issubset(st.session_state.data.columns) or not {"id", "parent", "json_front","json_back"}.issubset(st.session_state.card_data.columns):
+    #or not {"id", "parent", "json_front","json_back"}.issubset(st.session_state.card_data.columns)
+    if not {"id", "name", "type", "parent", "child", "barcode", "location"}.issubset(st.session_state.data.columns):
         st.error(
             "The containers sheet must have the required columns: 'id', 'name', 'type', 'parent', 'child', 'barcode', 'location'"
         )
-        st.error(
-            "The cards sheet must have the required columns: 'id', 'parent', 'json_front', 'json_back'"
-        )
+        # st.error(
+        #     "The cards sheet must have the required columns: 'id', 'parent', 'json_front', 'json_back'"
+        # )
         st.stop()
     else:
         # Filters and search
@@ -848,8 +851,8 @@ def run_top_to_bottom():
                     random_id = ''.join(random.choices(string.ascii_uppercase, k=10))
                     node_id = f"CAR-{random_id}"
                     # Ensure ID is unique by checking against existing DataFrame
-                    if not any(st.session_state.card_data['id'] == node_id):
-                        return node_id
+                    #if not any(st.session_state.card_data['id'] == node_id):
+                    return node_id
                     
             def get_location_ids(node_id, quantity):
                 outputs = []
@@ -915,8 +918,8 @@ def run_top_to_bottom():
                         "json_front": json_front,
                         "json_back": json_back
                     }])
-                    st.session_state.card_data = pd.concat([st.session_state.card_data, new_row], ignore_index=True)
-                    st.session_state.card_changes[len(st.session_state.card_data) - 1] = new_row.iloc[0].copy()
+                    #st.session_state.card_data = pd.concat([st.session_state.card_data, new_row], ignore_index=True)
+                    #st.session_state.card_changes[len(st.session_state.card_data) - 1] = new_row.iloc[0].copy()
 
 
                 st.session_state.new_item_entry = False  # Reset the new item session key
