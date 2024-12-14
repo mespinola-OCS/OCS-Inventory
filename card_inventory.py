@@ -250,6 +250,14 @@ def run_top_to_bottom():
             for index, row in filtered_rows.iterrows():
                 display_row(row, index)
 
+            missing_ids = [child_id for child_id in child_ids if child_id not in data["id"].astype(str).values]
+            for missing_id in missing_ids:
+                # Format the button label with the custom function
+                button_label = f"`CARD ID: {missing_id}`"
+                button_clicked = st.button(button_label)
+
+
+
         def display_parent():
             st.divider()
             st.caption(f"Parent of {st.session_state.data.iloc[st.session_state.selected_index]['id']}")
