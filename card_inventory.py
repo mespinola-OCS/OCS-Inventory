@@ -690,27 +690,27 @@ def run_top_to_bottom():
                 st.session_state.rerun_action = True
                 if st.session_state.pills_query == "**Page: 8.5x11, Label: 2x2**":
                     barcode_generator.download_qr_code_pdf(st.session_state.barcode_print_list, paper="sheet", label = "2x2")
-                    #st.session_state.barcode_print_list = [] #clear data
+                    st.session_state.barcode_print_list = [] #clear data
 
                 elif st.session_state.pills_query == "**Page: 8.5x11, Label: 1x1**":
                     barcode_generator.download_qr_code_pdf(st.session_state.barcode_print_list, paper="sheet", label = "1x1")
-                    #st.session_state.barcode_print_list = [] #clear data
+                    st.session_state.barcode_print_list = [] #clear data
                 
                 elif st.session_state.pills_query == "**Page and Label: 2x2 (Thermal Printer)**":
                     barcode_generator.download_qr_code_pdf(st.session_state.barcode_print_list, paper="thermal", label = "2x2")
-                    #st.session_state.barcode_print_list = [] #clear data
+                    st.session_state.barcode_print_list = [] #clear data
 
                 elif st.session_state.pills_query == "**Page and Label: 1x1 (Thermal Printer)**":
                     barcode_generator.download_qr_code_pdf(st.session_state.barcode_print_list, paper="thermal", label = "1x1")
-                    #st.session_state.barcode_print_list = [] #clear data
+                    st.session_state.barcode_print_list = [] #clear data
 
                 elif st.session_state.pills_query == "**Page: 8.5x11, Separator Style(2 pdfs)**":
                     barcode_generator.download_qr_code_pdf(st.session_state.barcode_print_list, paper="sheet", label = "separator")
-                    #st.session_state.barcode_print_list = [] #clear data
+                    st.session_state.barcode_print_list = [] #clear data
 
                 elif st.session_state.pills_query == "**Page: Thermal Printer, Separator Style (2 pdfs)**":
                     barcode_generator.download_qr_code_pdf(st.session_state.barcode_print_list, paper="thermal", label = "separator")
-                    #st.session_state.barcode_print_list = [] #clear data
+                    st.session_state.barcode_print_list = [] #clear data
 
 
         pills_header = [
