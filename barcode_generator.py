@@ -55,7 +55,7 @@ def generate_qr_code(data, label_w, label_h, format = "square"):
             font=font
         )
     elif format == "separator top":
-        img = img.resize((int(0.3 * dpi), int(0.3 * dpi)), Image.LANCZOS)
+        img = img.resize((int(0.4 * dpi), int(0.4 * dpi)), Image.LANCZOS)
 
         img_with_number = Image.new('RGB', (int(1 * dpi), int(1 * dpi)), 'white')
         img_with_number.paste(img, (int(1*dpi-(1.1*img.width)),0))
