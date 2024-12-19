@@ -62,7 +62,7 @@ def generate_qr_code(data, label_w, label_h, format = "square"):
 
         # Draw text below the QR code
         draw = ImageDraw.Draw(img_with_number)
-        font = ImageFont.truetype("DejaVuSans.ttf", int(14*(label_h/2) * dpi / 72))  # Scale font size based on DPI
+        font = ImageFont.truetype("DejaVuSans.ttf", int(12*(label_h/2) * dpi / 72))  # Scale font size based on DPI
         text = data
 
         # Use textbbox (new method) instead of textsize (deprecated) to get the bounding box of the text
