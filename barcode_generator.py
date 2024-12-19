@@ -58,7 +58,7 @@ def generate_qr_code(data, label_w, label_h, format = "square"):
         img = img.resize((int(0.3 * dpi), int(0.3 * dpi)), Image.LANCZOS)
 
         img_with_number = Image.new('RGB', (int(1 * dpi), int(1 * dpi)), 'white')
-        img_with_number.paste(img, (1*dpi-1.1*img.width,0))
+        img_with_number.paste(img, (int(1*dpi-(1.1*img.width)),0))
 
         # Draw text below the QR code
         draw = ImageDraw.Draw(img_with_number)
