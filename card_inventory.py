@@ -337,7 +337,7 @@ def run_top_to_bottom():
             def verify_proper_action(batch_type, end_type):
                 valid_parents = st.session_state.valid_parents
                 if end_type in valid_parents[batch_type]: #check if we are placing an item of status exactly 1 less into parent. Otherwise fail.
-                    fetch_sheet_data()
+                    st.session_state.data = fetch_sheet_data(service, SPREADSHEET_ID, SHEET_NAME)
                     return True                            
                 else:
                     st.error(f"Did not complete action. Cannot place type {batch_type} in {end_type}.") 
