@@ -59,12 +59,12 @@ def run_top_to_bottom():
             "machine": [], #1
             "shelf": [], #1
             "cart": [], #1
-            "tray": ["cart", "shelf", "machine"], #2
+            "plate": ["cart", "shelf", "machine"], #2
             "storage box": ["shelf"], #idk
-            "box": ["tray"], #3
-            "separator":["box", "storage box"], #4
+            "bin": ["plate"], #3
+            "separator":["bin", "storage box"], #4
             "location": [],
-            "card": ["box", "separator"]
+            "card": ["bin", "separator"]
         }
 
     if "previous_type" not in st.session_state:
@@ -429,7 +429,7 @@ def run_top_to_bottom():
                     st.session_state.changes[box_idx] = df.iloc[box_idx].copy()
                     st.success(f"Placed {df.loc[sep_idx, 'id']} in {df.loc[box_idx, 'id']}.") 
 
-                elif df.loc[box_idx, "type"] == "box":
+                elif df.loc[box_idx, "type"] == "bin":
                     if len(sep_idx) > 1:
                         st.warning(f"Completed action but only with the last scanned item.") 
                     sep_idx = sep_idx[-1]
@@ -731,7 +731,7 @@ def run_top_to_bottom():
         st.subheader("Filter and Search")
 
         # Category filter
-        categories_list = ("shelf", "machine", "cart", "tray", "box", "storage box", "separator", "location")
+        categories_list = ("shelf", "machine", "cart", "plate", "bin", "storage box", "separator", "location")
 
         c1, c2, c3, c4 = st.columns([5, 5, 1.5, 1.5])
         with c1:
@@ -971,7 +971,7 @@ def run_top_to_bottom():
 
             with st.form("add_items_form"):
                 st.subheader("Add New Containers")
-                node_type = st.selectbox("Select Type", ["shelf", "cart", "machine", "tray", "box", "storage box", "separator"])
+                node_type = st.selectbox("Select Type", ["shelf", "cart", "machine", "plate", "bin", "storage box", "separator"])
                 quantity = st.number_input("Quantity", min_value=1, max_value=500, step=1)
                 name = st.text_input("Name (optional)")
                 location_specific_quantity = st.number_input("How many location-specific tags?", min_value=0, max_value=500, step=1)
